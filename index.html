@@ -1552,27 +1552,12 @@ function render(){
   setEl('k_n_eb_r', isNoNew(p) ? '—' : pct(nEbSim, nRevSim));
   setDelta('k_n_eb_d', nEbSim - nEbBudget);
 
-  // 公司合并折旧摊销前利润：直接在renderSim里计算（不依赖renderGroup）
-  // = 直营EBITDA + SC + HQ - elim
+  // 公司合并折旧摊销前利润：先调用renderGroup确保_lastCompanySim是最新值
+  if(typeof renderGroup==='function'){ try{ renderGroup(); }catch(e){} }
   {
-    const _p = getParams();
-    const _noNew = isNoNew(_p);
-    const _dirEb  = sim.split.total.dir.ebitda;
-    const _stockRevSim = sRevSim;
-    const _fraRevSim   = _noNew ? 0 : Math.max(0, sim.split.total.fra.rev_total - sim.split.stock.fra.rev_total);
-    // SC EBITDA
-    const _scRevS = SC_RATES.rev_rate_s * _stockRevSim;
-    const _scRevN = SC_RATES.rev_rate_n * (sim.split.total.dir.rev_total + sim.split.total.fra.rev_total - _stockRevSim);
-    const _scEb   = (_scRevS*(SC_RATES.gp_rate_s - SC_RATES.labor_rate_s - SC_RATES.trans_rate_s - SC_RATES.energy_rate_s - SC_RATES.other_rate_s)
-                   + _scRevN*(SC_RATES.gp_rate_n - SC_RATES.labor_rate_n - SC_RATES.trans_rate_n - SC_RATES.energy_rate_n - SC_RATES.other_rate_n)
-                   - SC_RATES.rent_fixed
-                   + Number(_p.sc_gm/100||0)*(_scRevS+_scRevN)
-                   - Number(_p.sc_w/100||0)*(CORP_SPLIT.sc['26_stock'].labor+CORP_SPLIT.sc['26_new'].labor)
-                   + Number(_p.sc_rent||0));
-    // HQ EBITDA（复用已算好的值，通过全局暂存）
     const _coEbSim = (window._lastCompanySim !== undefined)
       ? window._lastCompanySim
-      : (_dirEb + _scEb - (CORP_BRIDGE_SPLIT['op']['elim_stock']||143678));
+      : 0;
     const coEbBudget = CORP_BRIDGE_SPLIT['op']['26_total'];
     const coEb25     = CORP_BRIDGE_SPLIT['op']['25'];
     setEl('k_co_eb', fmt(_coEbSim));
